@@ -63,7 +63,7 @@ let template_of_string s =
     in
     text_then_code ||| rest
   in
-  match loop [] (s, 0) with Failed -> assert false | Parsed (r, _) -> r
+  match loop [] (s, 0) with Failed -> assert false | Parsed { v = r; _ } -> r
 
 let print_template printer esc_printer chan =
   List.iter (function

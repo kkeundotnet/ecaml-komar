@@ -17,62 +17,64 @@
 
 open ExtString
 
-type 'a parse_result = Parsed of 'a * (string * int) | Failed
+type 'a parse_result = Parsed of { v : 'a; st : string * int } | Failed
 
-let return x s = Parsed (x, s)
+let return x st = Parsed { v = x; st }
 
-let fail _s = Failed
-
-let p_pred p (s, pos) =
+let p_pred p (s, n) =
   try
-    let c = s.[pos] in
-    if p c then Parsed (c, (s, succ pos)) else Failed
+    let c = s.[n] in
+    if p c then Parsed { v = c; st = (s, succ n) } else Failed
   with Invalid_argument _ -> Failed
 
-let p_pred2 p (s, pos) =
+let p_pred2 p (s, n) =
   try
-    let c = s.[pos] in
-    match p c with Some r -> Parsed (r, (s, succ pos)) | None -> Failed
+    let c = s.[n] in
+    match p c with
+    | Some r -> Parsed { v = r; st = (s, succ n) }
+    | None -> Failed
   with Invalid_argument _ -> Failed
 
 let p_char c = p_pred (( = ) c)
 
 (** just returns current position; doesn't jump *)
-let current_pos (s, pos) = Parsed (pos, (s, pos))
+let current_pos pos = Parsed { v = pos; st = pos }
 
 (** parsed if current position = p; doesn't jump *)
-let p_pos p (s, pos) = if p = pos then return p (s, pos) else fail (s, pos)
+let p_pos p (s, pos) = if p = pos then return p (s, pos) else Failed
 
 (** sets position *)
-let set_pos p (s, _) = Parsed ((), (s, p))
+let set_pos n (s, _) = Parsed { v = (); st = (s, n) }
 
-let dont_jump p (s, pos) =
-  match p (s, pos) with
-  | Parsed (r, _) -> Parsed (r, (s, pos))
+let dont_jump p (s, n) =
+  match p (s, n) with
+  | Parsed { v = r; _ } -> Parsed { v = r; st = (s, n) }
   | Failed -> Failed
 
-let p_begin (s, pos) = if pos = 0 then Parsed ((), (s, pos)) else Failed
+let p_begin (s, n) = if n = 0 then Parsed { v = (); st = (s, n) } else Failed
 
-let p_end (s, pos) =
-  if String.length s = pos then Parsed ((), (s, pos)) else Failed
+let p_end (s, n) =
+  if String.length s = n then Parsed { v = (); st = (s, n) } else Failed
 
-let p_somechar (s, pos) =
+let p_somechar (s, n) =
   try
-    let c = s.[pos] in
-    Parsed (c, (s, succ pos))
+    let c = s.[n] in
+    Parsed { v = c; st = (s, succ n) }
   with Invalid_argument _ -> Failed
 
 let p_manyf_arg prs f v0 =
   let rec loop v st =
     match prs v st with
-    | Parsed (x, s') -> loop (f v x) s'
-    | Failed -> Parsed (v, st)
+    | Parsed { v = x; st = s' } -> loop (f v x) s'
+    | Failed -> Parsed { v; st }
   in
   loop v0
 
 let p_many prs =
   let rec loop st =
-    match prs st with Parsed (_, s') -> loop s' | Failed -> Parsed ((), st)
+    match prs st with
+    | Parsed { st = s'; _ } -> loop s'
+    | Failed -> Parsed { v = (); st }
   in
   loop
 
@@ -80,39 +82,43 @@ let p_upto_timesf times prs f v0 =
   let rec loop t v st =
     if t < times then
       match prs st with
-      | Parsed (x, s') -> loop (succ t) (f v x) s'
-      | Failed -> Parsed (v, st)
-    else Parsed (v, st)
+      | Parsed { v = x; st = s' } -> loop (succ t) (f v x) s'
+      | Failed -> Parsed { v; st }
+    else Parsed { v; st }
   in
   loop 0 v0
 
 let p_opt defval p s =
-  match p s with Parsed _ as ok -> ok | Failed -> Parsed (defval, s)
+  match p s with
+  | Parsed _ as ok -> ok
+  | Failed -> Parsed { v = defval; st = s }
 
 let ( ||| ) p1 p2 s = match p1 s with Parsed _ as ok -> ok | Failed -> p2 s
 
 let ( >>= ) p1 f s =
-  match p1 s with Parsed (x, s2) -> f x s2 | Failed -> Failed
+  match p1 s with Parsed { v = x; st = s2 } -> f x s2 | Failed -> Failed
 
 let ( >>> ) p1 p2 s =
-  match p1 s with Parsed (_, s2) -> p2 s2 | Failed -> Failed
+  match p1 s with Parsed { st = s2; _ } -> p2 s2 | Failed -> Failed
 
 let p_plus prs = prs >>> p_many prs
 
 let p_manyf prs f v0 =
   let rec loop v st =
     match prs st with
-    | Parsed (x, s') -> loop (f v x) s'
-    | Failed -> Parsed (v, st)
+    | Parsed { v = x; st = s' } -> loop (f v x) s'
+    | Failed -> Parsed { v; st }
   in
   loop v0
 
 let p_manyf_ends_with prs f v0 e =
   let rec loop v st =
     match prs st with
-    | Parsed (x, s') -> loop (f v x) s'
+    | Parsed { v = x; st = s' } -> loop (f v x) s'
     | Failed -> (
-        match e st with Parsed (_, st) -> Parsed (v, st) | Failed -> Failed )
+        match e st with
+        | Parsed { st; _ } -> Parsed { v; st }
+        | Failed -> Failed )
   in
   loop v0
 
@@ -133,7 +139,7 @@ let p_int (s, pos) =
     match c with
     | '-' -> (
         match p_manyf p_digit mkInt 0 t with
-        | Parsed (x, s') -> Parsed (-x, s')
+        | Parsed { v = x; st = s' } -> Parsed { v = -x; st = s' }
         | Failed -> Failed )
     | '0' .. '9' -> p_manyf p_digit mkInt 0 (s, pos)
     | _ -> Failed
@@ -167,7 +173,9 @@ let rec p_listch prs sep =
 let p_intlist = p_listch p_int
 
 let p_void prs s =
-  match prs s with Parsed (_, s') -> Parsed ((), s') | Failed -> Failed
+  match prs s with
+  | Parsed { st = s'; _ } -> Parsed { v = (); st = s' }
+  | Failed -> Failed
 
 let mkFloat (fv, fr) c =
   (fv +. (float_of_int (int_of_char c - 48) *. fr), fr *. 0.1)
@@ -182,8 +190,12 @@ let p_str_until until (s, pos) =
   let beg = pos in
   let rec loop (s, pos) =
     match until (s, pos) with
-    | Parsed (until_r, (s, new_p)) ->
-        Parsed ((String.slice ~first:beg ~last:pos s, until_r), (s, new_p))
+    | Parsed { v = until_r; st = s, new_p } ->
+        Parsed
+          {
+            v = (String.slice ~first:beg ~last:pos s, until_r);
+            st = (s, new_p);
+          }
     | Failed ->
         (* FIXME *)
         if pos = String.length s then Failed else loop (s, succ pos)
@@ -195,8 +207,12 @@ let p_until p until (s, pos) =
   let beg = pos in
   let rec loop (s, pos) =
     match until (s, pos) with
-    | Parsed (until_r, (s, new_p)) ->
-        Parsed ((String.slice ~first:beg ~last:pos s, until_r), (s, new_p))
+    | Parsed { v = until_r; st = s, new_p } ->
+        Parsed
+          {
+            v = (String.slice ~first:beg ~last:pos s, until_r);
+            st = (s, new_p);
+          }
     | Failed -> (
         match p (s, pos) with
         | Parsed _ -> loop (s, succ pos)
@@ -207,4 +223,4 @@ let p_until p until (s, pos) =
 (* checks previous char; doesn't jump *)
 let check_prev p (s, pos) =
   let prev_pos = pos - 1 in
-  (p >>= fun r _ -> Parsed (r, (s, pos))) (s, prev_pos)
+  (p >>= fun r _ -> Parsed { v = r; st = (s, pos) }) (s, prev_pos)
