@@ -1,50 +1,18 @@
-PACKAGES = extlib
-FILES = parsercomb.ml ecaml.ml
+.PHONY: default build install uninstall test clean
 
-NAME = ecaml
-VERSION := $(shell head -n 1 VERSION)
-CAMLC   = ocamlfind ocamlc   $(LIB)
-CAMLOPT = ocamlfind ocamlopt $(LIB)
-CAMLDEP = ocamlfind ocamldep
-LIB = -package $(PACKAGES)
-PP =
+default: build
 
-PREFIX=/usr/local
+build:
+	dune build
 
-OBJS    = $(FILES:.ml=.cmo)
-OPTOBJS = $(FILES:.ml=.cmx)
+install:
+	dune install
 
-all: $(NAME)
-
-$(NAME): $(OBJS)
-	$(CAMLC) -linkpkg -o $@ $^
-
-$(NAME).opt: $(OPTBJS)
-	$(CAMLOPT) -linkpkg -o $@ $^
-
-.SUFFIXES:
-.SUFFIXES: .ml .mli .cmo .cmi .cmx
-
-.ml.cmo:
-	$(CAMLC) $(PP) -c $<
-.mli.cmi:
-	$(CAMLC) -c $<
-.ml.cmx:
-	$(CAMLOPT) $(PP) -c $<
-
-install: $(NAME)
-	install -m 755 $(NAME) $(PREFIX)/bin/$(NAME)
+uninstall:
+	dune uninstall
 
 clean:
-	-rm -f *.cm[ioxa] *.cmx[as] *.o *.a *~
-	-rm -f .depend
-	-rm -f $(NAME) $(NAME).opt
-
-depend: .depend
-
-.depend: $(FILES)
-	$(CAMLDEP) $(PP) $(LIB) $(FILES:.ml=.mli) $(FILES) > .depend
-
-FORCE:
-
--include .depend
+	dune clean
+# Optionally, remove all files/folders ignored by git as defined
+# in .gitignore (-X).
+	git clean -dfXq
