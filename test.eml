@@ -1,0 +1,12 @@
+<html>
+<head></head>
+<body>
+<p><%= if Sys.os_type = "Unix" then "Hello world!" else "gtfo" %></p>
+<ul>
+% List.iter (fun s ->
+<li><%= s %></li>
+% ) ["hello"; "from"; "list"];
+</ul>
+<%=raw "<p>Goodbye</p>" %>
+</body>
+</html>
