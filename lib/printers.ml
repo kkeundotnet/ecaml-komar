@@ -13,16 +13,16 @@
  *
  * Copyright 2020 kkeun.net *)
 
-open Printf
+module P = Printf
 
-let printer ch s = fprintf ch "%s" s
+let printer ch s = P.fprintf ch "%s" s
 
 let esc_char ch = function
-  | '&' -> fprintf ch "&amp;"
-  | '<' -> fprintf ch "&lt;"
-  | '>' -> fprintf ch "&gt;"
-  | '"' -> fprintf ch "&quot;"
-  | '\'' -> fprintf ch "&apos;"
-  | c -> fprintf ch "%c" c
+  | '&' -> P.fprintf ch "&amp;"
+  | '<' -> P.fprintf ch "&lt;"
+  | '>' -> P.fprintf ch "&gt;"
+  | '"' -> P.fprintf ch "&quot;"
+  | '\'' -> P.fprintf ch "&apos;"
+  | c -> P.fprintf ch "%c" c
 
 let esc_printer ch s = String.iter (esc_char ch) s

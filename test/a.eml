@@ -1,6 +1,6 @@
 % let run f l = (
 <html>
-<head></head>
+<head>Hello ECaml!</head>
 <body>
 <p><%= if Sys.os_type = "Unix" then "Hello world!" else "gtfo" %></p>
 <ul>

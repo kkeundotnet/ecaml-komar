@@ -16,7 +16,9 @@
  * Copyright 2012-2013 Alexander Markov *)
 
 open ExtLib
-open Printf
+module P = Printf
+
+(* Type *)
 
 type elem =
   | Text of string
@@ -29,11 +31,11 @@ type t = elem list
 
 let print ~printer ~esc_printer ch =
   List.iter (function
-    | LineOfCode s -> fprintf ch "%s\n" s
-    | BlockOfCode s -> fprintf ch "%s" s
-    | BlockOfExpr s -> fprintf ch "%s (%s);\n" esc_printer s
-    | BlockOfRawExpr s -> fprintf ch "%s (%s);\n" printer s
-    | Text s -> fprintf ch "%s %S;\n" printer s)
+    | LineOfCode s -> P.fprintf ch "%s\n" s
+    | BlockOfCode s -> P.fprintf ch "%s" s
+    | BlockOfExpr s -> P.fprintf ch "%s (%s);\n" esc_printer s
+    | BlockOfRawExpr s -> P.fprintf ch "%s (%s);\n" printer s
+    | Text s -> P.fprintf ch "%s %S;\n" printer s)
 
 (* Continuation *)
 
@@ -115,22 +117,34 @@ let template_of_string s =
   in
   loop (s, 0) []
 
-let () =
-  let source = ref "" in
-  let dest = ref "" in
-  let printer = ref "" in
-  let esc_printer = ref "" in
-  let header = ref "" in
-  let footer = ref "" in
+(* Main *)
+
+type env = {
+  source : string;
+  dest : string;
+  printer : string;
+  esc_printer : string;
+  header : string;
+  footer : string;
+}
+
+let read_arg () =
+  let source = ref [] in
+  let dest = ref None in
+  let printer = ref "print_string" in
+  let esc_printer = ref !printer in
+  let header = ref None in
+  let footer = ref None in
   let add_directive = ref false in
   let help =
-    "ecaml - a simple template tool for OCaml\n"
-    ^ "Usage: ecaml [OPTIONS] template.eml"
+    {|ecaml - a simple template tool for OCaml
+Usage: ecaml [OPTIONS...] <.eml file>
+|}
   in
-  let l =
+  Arg.parse
     [
       ( "-o",
-        Arg.Set_string dest,
+        Arg.String (fun v -> dest := Some v),
         "FILE\tdestination file to output an OCaml code; default is \
          sourcename.ml" );
       ( "-p",
@@ -144,35 +158,50 @@ let () =
         Set add_directive,
         "\t\twrite a directive with original file name for more impressive \
          error messages" );
-      ("-header", Set_string header, "STR\theader to write before the output");
-      ("-footer", Set_string footer, "STR\tfooter to write after the output");
+      ( "-header",
+        String (fun v -> header := Some v),
+        "STR\theader to write before the output" );
+      ( "-footer",
+        String (fun v -> footer := Some v),
+        "STR\tfooter to write after the output" );
     ]
+    (fun a -> source := a :: !source)
+    help;
+  let source =
+    match !source with
+    | [ source ] -> source
+    | _ ->
+        prerr_endline "You must specify a source template to parse";
+        exit 1
   in
-  Arg.parse l (fun a -> source := a) help;
-  if !source = "" then (
-    eprintf "you must specify a source template to parse\n";
-    exit 1 );
-  ( if !dest = "" then
-    let l = String.nsplit !source "." in
-    let l =
-      match List.rev l with "eml" :: tl -> "ml" :: tl | l -> "ml" :: l
-    in
-    dest := String.concat "." (List.rev l) );
-  if !printer = "" then printer := "print_string";
-  if !esc_printer = "" then esc_printer := !printer;
+  let dest =
+    match !dest with
+    | None -> Filename.remove_extension source ^ ".ml"
+    | Some dest -> dest
+  in
+  let printer = !printer in
+  let esc_printer = !esc_printer in
+  let add_directive = !add_directive in
+  let header =
+    (if add_directive then {|# 1 "_ecaml_header_"
+|} else "")
+    ^ Option.map_default (P.sprintf "%s\n") "" !header
+    ^
+    if add_directive then P.sprintf "# 1 %S\n" (Filename.basename source)
+    else ""
+  in
+  let footer =
+    Option.map_default (P.sprintf "%s\n") "" !footer
+    ^ if add_directive then P.sprintf {|# 1 "_ecaml_footer_"
+|} else ""
+  in
+  { source; dest; printer; esc_printer; header; footer }
 
-  let s = Std.input_file !source in
-  let t = template_of_string s in
-  let chan = open_out !dest in
-  if !header <> "" then (
-    if !add_directive then output_string chan "# 1 \"_ecaml_header_\"\n";
-    output_string chan !header;
-    output_char chan '\n' );
-  if !add_directive then fprintf chan "# 1 %S\n" (Filename.basename !source);
-  print ~printer:!printer ~esc_printer:!esc_printer chan t;
-  if !footer <> "" then (
-    if !add_directive then (
-      output_char chan '\n';
-      output_string chan "# 1 \"_ecaml_footer_\"\n" );
-    output_string chan !footer );
+let () =
+  let { source; dest; printer; esc_printer; header; footer } = read_arg () in
+  let v = Std.input_file source |> template_of_string in
+  let chan = open_out dest in
+  P.fprintf chan "%s" header;
+  print ~printer ~esc_printer chan v;
+  P.fprintf chan "%s" footer;
   close_out chan
