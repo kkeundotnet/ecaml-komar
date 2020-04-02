@@ -1,0 +1,4 @@
+(library
+ (name printers)
+ (public_name ecaml-komar)
+ (libraries))

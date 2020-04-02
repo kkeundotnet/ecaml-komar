@@ -1,3 +1,4 @@
+% let run f l = (
 <html>
 <head></head>
 <body>
@@ -5,8 +6,9 @@
 <ul>
 % List.iter (fun s ->
 <li><%= s %></li>
-% ) ["hello"; "from"; "list"];
+% ) l;
 </ul>
 <%=raw "<p>Goodbye</p>" %>
 </body>
 </html>
+% )

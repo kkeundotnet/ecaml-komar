@@ -1,0 +1,11 @@
+(test
+ (name test)
+ (libraries printers))
+
+(rule
+ (target a.ml)
+ (deps a.eml)
+ (action (run %{bin:ecaml-komar} %{deps}
+              -p "printer f"
+              -esc-p "esc_printer f"
+              -header "open Printers")))

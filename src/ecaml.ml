@@ -58,7 +58,8 @@ let p_pred p (s, n) =
   else Failed
 
 (** parsed if current position = p; doesn't jump *)
-let p_pos x ((s, pos) as st) = if x = pos then Parsed { v = (); st } else Failed
+let p_pos x ((_s, pos) as st) =
+  if x = pos then Parsed { v = (); st } else Failed
 
 let p_whitespace = p_pred (function ' ' | '\t' -> true | _ -> false)
 
@@ -118,7 +119,6 @@ let () =
   let source = ref "" in
   let dest = ref "" in
   let printer = ref "" in
-  (* TODO: no esc_printer *)
   let esc_printer = ref "" in
   let header = ref "" in
   let footer = ref "" in
@@ -169,7 +169,7 @@ let () =
     output_string chan !header;
     output_char chan '\n' );
   if !add_directive then fprintf chan "# 1 %S\n" (Filename.basename !source);
-  print !printer !esc_printer chan t;
+  print ~printer:!printer ~esc_printer:!esc_printer chan t;
   if !footer <> "" then (
     if !add_directive then (
       output_char chan '\n';
