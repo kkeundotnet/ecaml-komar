@@ -7,5 +7,5 @@
  (deps a.eml)
  (action (run %{bin:ecaml-komar} %{deps}
               -header "open Printers"
-              -p "printer f"
-              -esc-p "esc_printer f")))
+              -p "printer ch"
+              -esc-p "esc_printer ch")))
