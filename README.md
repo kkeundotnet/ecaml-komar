@@ -3,7 +3,7 @@ ECaml
 
 A simple template engine for OCaml
 
-This is a fork of ECaml of Alexander Markov.  Visit http://komar.in/en/code/ecaml to get the
+This is a fork of ECaml developed by Alexander Markov.  Visit http://komar.in/en/code/ecaml to get the
 original version.
 
 Build
