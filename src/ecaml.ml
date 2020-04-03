@@ -137,8 +137,8 @@ let read_arg () =
   let footer = ref None in
   let add_directive = ref false in
   let help =
-    {|ecaml - a simple template tool for OCaml
-Usage: ecaml [OPTIONS...] <.eml file>
+    {|ECaml - A simple template tool for OCaml
+Usage: ecaml-komar [OPTIONS...] <.eml file>
 |}
   in
   Arg.parse
@@ -171,7 +171,7 @@ Usage: ecaml [OPTIONS...] <.eml file>
     match !source with
     | [ source ] -> source
     | _ ->
-        prerr_endline "You must specify a source template to parse";
+        prerr_endline "You must specify a source template to parse.";
         exit 1
   in
   let dest =

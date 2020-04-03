@@ -1,11 +1,14 @@
 opam-version: "2.0"
-maintainer: ["Alexander Markov" "kkeundotnet <kkeundotnet@gmail.com>"]
-authors: ["Alexander Markov"]
-homepage: "http://komar.in/en/code/ecaml"
-bug-reports: "http://komar.in/en/about"
+name: "ECaml"
+version: "0.11.1"
+maintainer: ["kkeundotnet"]
+authors: ["Alexander Markov" "kkeundotnet"]
+homepage: "https://github.com/kkeundotnet/ecaml-komar"
+bug-reports: "https://github.com/kkeundotnet/ecaml-komar/issues"
+dev-repo: "git+https://github.com/kkeundotnet/ecaml-komar.git"
 
 synopsis: "A simple template engine for OCaml"
-description: "A simple template engine for OCaml"
+description: "This is a fork of ECaml of Alexander Markov."
 
 build: [
   ["dune" "build" "-p" name "-j" jobs]
