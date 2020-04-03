@@ -67,6 +67,6 @@ Template syntax
 
 Alexander Markov said:
 
-> This tool is so stupid, so don't forget about ; at the end of your expressions!
+> This tool is so stupid, so don't forget about `;` at the end of your expressions!
 >
 > I don't want to add any other features yet, because I want to keep this tool simple.
