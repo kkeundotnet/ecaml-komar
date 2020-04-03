@@ -13,4 +13,4 @@
  *
  * Copyright 2020 kkeun.net *)
 
-let () = A.run stdout [ "<script><script>"; "hi" ]
+let () = A.run stdout [ "<script><script>"; "Hi" ]
