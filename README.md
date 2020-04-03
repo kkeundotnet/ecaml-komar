@@ -37,8 +37,8 @@ $ make uninstall
 Usage
 ---
 
-Note that the binary and package name is `ecaml-komar`, not `ecaml`, because there is a package that
-have the same name already, [`Ecaml` package](https://github.com/janestreet/ecaml) by Jane Street.
+Note that the binary and package name is "ecaml-komar", not "ecaml", because there is a package that
+have the same name already, [`Ecaml`](https://github.com/janestreet/ecaml) by Jane Street.
 
 ```
 $ ecaml-komar --help
