@@ -1,4 +1,4 @@
-% let run ch l = (
+% let run l = (
 <html>
 <head>Hello ECaml!</head>
 <body>

@@ -13,6 +13,6 @@
  *
  * Copyright 2020 kkeun.net *)
 
-val printer : out_channel -> string -> unit
+val printer : Format.formatter -> string -> unit
 
-val esc_printer : out_channel -> string -> unit
+val esc_printer : Format.formatter -> string -> unit

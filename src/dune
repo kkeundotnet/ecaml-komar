@@ -1,4 +1,4 @@
 (executable
  (name ecaml)
  (public_name ecaml-komar)
- (libraries extlib))
+ (libraries core))

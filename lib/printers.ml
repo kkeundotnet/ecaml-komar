@@ -13,16 +13,16 @@
  *
  * Copyright 2020 kkeun.net *)
 
-module P = Printf
+module F = Format
 
-let printer ch s = P.fprintf ch "%s" s
+let printer f s = F.pp_print_string f s
 
-let esc_char ch = function
-  | '&' -> P.fprintf ch "&amp;"
-  | '<' -> P.fprintf ch "&lt;"
-  | '>' -> P.fprintf ch "&gt;"
-  | '"' -> P.fprintf ch "&quot;"
-  | '\'' -> P.fprintf ch "&apos;"
-  | c -> P.fprintf ch "%c" c
+let esc_char f = function
+  | '&' -> F.pp_print_string f "&amp;"
+  | '<' -> F.pp_print_string f "&lt;"
+  | '>' -> F.pp_print_string f "&gt;"
+  | '"' -> F.pp_print_string f "&quot;"
+  | '\'' -> F.pp_print_string f "&apos;"
+  | c -> F.pp_print_char f c
 
-let esc_printer ch s = String.iter (esc_char ch) s
+let esc_printer f s = String.iter (esc_char f) s

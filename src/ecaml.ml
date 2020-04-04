@@ -15,8 +15,8 @@
  *
  * Copyright 2012-2013 Alexander Markov *)
 
-open ExtLib
-module P = Printf
+open Core
+module F = Format
 
 (* Type *)
 
@@ -29,13 +29,13 @@ type elem =
 
 type t = elem list
 
-let print ~printer ~esc_printer ch =
-  List.iter (function
-    | LineOfCode s -> P.fprintf ch "%s\n" s
-    | BlockOfCode s -> P.fprintf ch "%s" s
-    | BlockOfExpr s -> P.fprintf ch "%s (%s);\n" esc_printer s
-    | BlockOfRawExpr s -> P.fprintf ch "%s (%s);\n" printer s
-    | Text s -> P.fprintf ch "%s %S;\n" printer s)
+let print f ~printer ~esc_printer x =
+  List.iter x ~f:(function
+    | LineOfCode s -> F.fprintf f "%s\n" s
+    | BlockOfCode s -> F.pp_print_string f s
+    | BlockOfExpr s -> F.fprintf f "%s (%s);\n" esc_printer s
+    | BlockOfRawExpr s -> F.fprintf f "%s (%s);\n" printer s
+    | Text s -> F.fprintf f "%s %S;\n" printer s)
 
 (* Continuation *)
 
@@ -65,12 +65,12 @@ let p_pos x ((_s, pos) as st) =
 
 let p_whitespace = p_pred (function ' ' | '\t' -> true | _ -> false)
 
-let p_char c = p_pred (( = ) c)
+let p_char c = p_pred (fun c' -> Char.equal c c')
 
 (* checks previous char; doesn't jump *)
 let p_prev_char c (s, pos) = if pos <= 0 then Failed else p_char c (s, pred pos)
 
-let p_str str = String.fold_left (fun p c -> p >>> p_char c) (parsed ()) str
+let p_str str = String.fold str ~init:(parsed ()) ~f:(fun p c -> p >>> p_char c)
 
 let p_until_parsed p ((s, pos) as st) =
   let len = String.length s in
@@ -80,7 +80,8 @@ let p_until_parsed p ((s, pos) as st) =
     else
       match p st with
       | Parsed { v; st = (s, _) as st } ->
-          Parsed { v = (String.slice ~first ~last:pos s, v); st }
+          let text = if first < pos then String.slice s first pos else "" in
+          Parsed { v = (text, v); st }
       | Failed -> loop (s, succ pos)
   in
   loop st
@@ -109,11 +110,13 @@ let code_fragment =
       >>| fun code -> LineOfCode code )
 
 let template_of_string s =
-  let cons_text text acc = if text = "" then acc else Text text :: acc in
+  let cons_text text acc =
+    if String.is_empty text then acc else Text text :: acc
+  in
   let rec loop ((s, pos) as st) acc =
     match p_until_parsed code_fragment st with
     | Parsed { v = text, code; st } -> loop st (code :: cons_text text acc)
-    | Failed -> cons_text (String.slice ~first:pos s) acc |> List.rev
+    | Failed -> cons_text (String.slice s pos (String.length s)) acc |> List.rev
   in
   loop (s, 0) []
 
@@ -131,8 +134,8 @@ type env = {
 let read_arg () =
   let source = ref [] in
   let dest = ref None in
-  let printer = ref "print_string" in
-  let esc_printer = ref !printer in
+  let printer = ref "Printers.printer Format.std_formatter" in
+  let esc_printer = ref "Printers.esc_printer Format.std_formatter" in
   let header = ref None in
   let footer = ref None in
   let add_directive = ref false in
@@ -176,7 +179,7 @@ Usage: ecaml-komar [OPTIONS...] <.eml file>
   in
   let dest =
     match !dest with
-    | None -> Filename.remove_extension source ^ ".ml"
+    | None -> Filename.chop_extension source ^ ".ml"
     | Some dest -> dest
   in
   let printer = !printer in
@@ -185,23 +188,24 @@ Usage: ecaml-komar [OPTIONS...] <.eml file>
   let header =
     (if add_directive then {|# 1 "_ecaml_header_"
 |} else "")
-    ^ Option.map_default (P.sprintf "%s\n") "" !header
+    ^ Option.value_map !header ~default:"" ~f:(F.asprintf "%s\n")
     ^
-    if add_directive then P.sprintf "# 1 %S\n" (Filename.basename source)
+    if add_directive then F.asprintf "# 1 %S\n" (Filename.basename source)
     else ""
   in
   let footer =
-    Option.map_default (P.sprintf "%s\n") "" !footer
-    ^ if add_directive then P.sprintf {|# 1 "_ecaml_footer_"
+    Option.value_map !footer ~default:"" ~f:(F.asprintf "%s\n")
+    ^ if add_directive then F.asprintf {|# 1 "_ecaml_footer_"
 |} else ""
   in
   { source; dest; printer; esc_printer; header; footer }
 
 let () =
   let { source; dest; printer; esc_printer; header; footer } = read_arg () in
-  let v = Std.input_file source |> template_of_string in
-  let chan = open_out dest in
-  P.fprintf chan "%s" header;
-  print ~printer ~esc_printer chan v;
-  P.fprintf chan "%s" footer;
-  close_out chan
+  let v = In_channel.read_all source |> template_of_string in
+  Out_channel.with_file ~binary:false dest ~f:(fun ch ->
+      let f = F.formatter_of_out_channel ch in
+      F.pp_print_string f header;
+      print f ~printer ~esc_printer v;
+      F.pp_print_string f footer;
+      F.pp_print_flush f ())
